@@ -23,7 +23,7 @@ GREEN1 = (0, 255, 0)  # Snake 2
 BLACK = (0, 0, 0)
 
 BLOCK_SIZE = 20
-SPEED = 30  # Adjust speed for AI training
+#SPEED = 30  # Adjust speed for AI training
 FOOD_COUNT = 7  # Number of food items on the board at the same time
 
 class SnakeGameAI:
@@ -69,15 +69,17 @@ class SnakeGameAI:
             # Ensure food does not overlap with snakes or existing foods
             if food not in self.snake1 and food not in self.snake2 and food not in self.foods:
                 self.foods.append(food)
-
+    
     def get_state(self, snake_num):
         """Returns the state representation for AI training."""
         if snake_num == 1:
             head = self.snake1[0]
             direction = self.direction1
+            snake = self.snake1
         else:
             head = self.snake2[0]
             direction = self.direction2
+            snake = self.snake2
 
         # Points around the snake
         point_l = Point(head.x - BLOCK_SIZE, head.y)
@@ -99,22 +101,22 @@ class SnakeGameAI:
 
         state = [
             # Danger in the current direction
-            (dir_r and self._is_collision(point_r)) or 
-            (dir_l and self._is_collision(point_l)) or 
-            (dir_u and self._is_collision(point_u)) or 
-            (dir_d and self._is_collision(point_d)),
+            (dir_r and self._is_collision(point_r, snake)) or 
+            (dir_l and self._is_collision(point_l, snake)) or 
+            (dir_u and self._is_collision(point_u, snake)) or 
+            (dir_d and self._is_collision(point_d, snake)),
 
             # Danger right
-            (dir_u and self._is_collision(point_r)) or 
-            (dir_d and self._is_collision(point_l)) or 
-            (dir_l and self._is_collision(point_u)) or 
-            (dir_r and self._is_collision(point_d)),
+            (dir_u and self._is_collision(point_r, snake)) or 
+            (dir_d and self._is_collision(point_l, snake)) or 
+            (dir_l and self._is_collision(point_u, snake)) or 
+            (dir_r and self._is_collision(point_d, snake)),
 
             # Danger left
-            (dir_d and self._is_collision(point_r)) or 
-            (dir_u and self._is_collision(point_l)) or 
-            (dir_r and self._is_collision(point_u)) or 
-            (dir_l and self._is_collision(point_d)),
+            (dir_d and self._is_collision(point_r, snake)) or 
+            (dir_u and self._is_collision(point_l, snake)) or 
+            (dir_r and self._is_collision(point_u, snake)) or 
+            (dir_l and self._is_collision(point_d, snake)),
 
             # Current direction
             dir_l,
@@ -131,53 +133,6 @@ class SnakeGameAI:
 
         return np.array(state, dtype=int)
     
-    def play_step(self, action1=None, action2=None):
-        """Plays one step in the game with AI-controlled moves."""
-        # AI-Controlled Moves
-        if action1 is not None:
-            self.direction1 = self._move_ai(self.direction1, action1)
-        if action2 is not None:
-            self.direction2 = self._move_ai(self.direction2, action2)
-
-        # Move both snakes
-        self._move(self.direction1, 1)
-        self.snake1.insert(0, self.head1)
-
-        self._move(self.direction2, 2)
-        self.snake2.insert(0, self.head2)
-        
-        # Check for collisions
-        game_over = False
-        if self._is_collision(self.head1, self.snake1) or self._is_collision(self.head2, self.snake2) or self.head1 == self.head2:
-            game_over = True
-            return game_over, self.score1, self.score2, -10, -10  # Penalty for dying
-
-        # Check food consumption
-        reward1 = 0
-        reward2 = 0
-
-        if self.head1 in self.foods:
-            self.score1 += 1
-            reward1 = 10
-            self.foods.remove(self.head1)
-            self._place_foods()
-
-        if self.head2 in self.foods:
-            self.score2 += 1
-            reward2 = 10
-            self.foods.remove(self.head2)
-            self._place_foods()
-
-        # Remove tail
-        self.snake1.pop()
-        self.snake2.pop()
-
-        # Update UI
-        self._update_ui()
-        self.clock.tick(SPEED)
-        
-        return game_over, self.score1, self.score2, reward1, reward2
-    
     def _is_collision(self, head, snake):
         """Checks if a snake collides with a wall or itself."""
         if head.x >= self.w or head.x < 0 or head.y >= self.h or head.y < 0:
@@ -185,49 +140,3 @@ class SnakeGameAI:
         if head in snake[1:]:
             return True
         return False
-
-    def _move_ai(self, direction, action):
-        """Maps AI action (0=straight, 1=left, 2=right) to new direction."""
-        directions = [Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP]
-        idx = directions.index(direction)
-
-        if action == 1:  # Turn Left
-            new_dir = directions[(idx - 1) % 4]
-        elif action == 2:  # Turn Right
-            new_dir = directions[(idx + 1) % 4]
-        else:  # Continue Straight
-            new_dir = direction
-
-        return new_dir
-
-    def _move(self, direction, snake_num):
-        """Moves a snake in the given direction."""
-        if snake_num == 1:
-            x, y = self.head1.x, self.head1.y
-        else:
-            x, y = self.head2.x, self.head2.y
-
-        if direction == Direction.RIGHT:
-            x += BLOCK_SIZE
-        elif direction == Direction.LEFT:
-            x -= BLOCK_SIZE
-        elif direction == Direction.DOWN:
-            y += BLOCK_SIZE
-        elif direction == Direction.UP:
-            y -= BLOCK_SIZE
-
-        if snake_num == 1:
-            self.head1 = Point(x, y)
-        else:
-            self.head2 = Point(x, y)
-
-    def _update_ui(self):
-        """Updates the game display."""
-        self.display.fill(BLACK)
-        for food in self.foods:
-            pygame.draw.rect(self.display, RED, pygame.Rect(food.x, food.y, BLOCK_SIZE, BLOCK_SIZE))
-        for pt in self.snake1:
-            pygame.draw.rect(self.display, BLUE1, pygame.Rect(pt.x, pt.y, BLOCK_SIZE, BLOCK_SIZE))
-        for pt in self.snake2:
-            pygame.draw.rect(self.display, GREEN1, pygame.Rect(pt.x, pt.y, BLOCK_SIZE, BLOCK_SIZE))
-        pygame.display.flip()
