@@ -140,3 +140,82 @@ class SnakeGameAI:
         if head in snake[1:]:
             return True
         return False
+    def play_step(self, action1, action2):
+        '''
+        Updates the directions of both snakes based on the selected actions.
+        Actions: 0 = straight, 1 = right turn, 2 = left turn
+        '''
+        self.direction1 = self._update_direction(self.direction1, action1)
+        self.direction2 = self._update_direction(self.direction2, action2)
+
+    def _update_direction(self, current_direction, action):
+        directions = [Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP]
+        idx = directions.index(current_direction)
+
+        if action == 1:  # turn right
+            new_dir = directions[(idx + 1) % 4]
+        elif action == 2:  # turn left
+            new_dir = directions[(idx - 1) % 4]
+        else:  # go straight
+            new_dir = current_direction
+
+        return new_dir
+    def step(self, action1, action2):
+        self.play_step(action1, action2)  # update directions
+        self._move_snakes()  # you'll need to implement this if not already
+        
+        # Compute rewards and done status
+        reward1 = 0
+        reward2 = 0
+        done = False
+
+        if self._is_collision(self.snake1[0], self.snake1):
+            reward1 = -10
+            done = True
+        elif self.snake1[0] in self.foods:
+            reward1 = 10
+            self.score1 += 1
+            self._place_foods()  # or just remove one food
+
+        if self._is_collision(self.snake2[0], self.snake2):
+            reward2 = -10
+            done = True
+        elif self.snake2[0] in self.foods:
+            reward2 = 10
+            self.score2 += 1
+            self._place_foods()
+
+        # Small penalty per step to encourage quicker decision-making
+        reward1 += -0.1
+        reward2 += -0.1
+
+        return reward1, reward2, done
+    def _move_snakes(self):
+        #Moves both snakes one block in their current direction.
+        def move(head, direction):
+            if direction == Direction.RIGHT:
+                return Point(head.x + BLOCK_SIZE, head.y)
+            elif direction == Direction.LEFT:
+                return Point(head.x - BLOCK_SIZE, head.y)
+            elif direction == Direction.DOWN:
+                return Point(head.x, head.y + BLOCK_SIZE)
+            elif direction == Direction.UP:
+                return Point(head.x, head.y - BLOCK_SIZE)
+
+        # Move Snake 1
+        new_head1 = move(self.snake1[0], self.direction1)
+        self.snake1.insert(0, new_head1)
+        if new_head1 in self.foods:
+            # Food eaten, don't remove tail (snake grows)
+            pass
+        else:
+            self.snake1.pop()
+
+        # Move Snake 2
+        new_head2 = move(self.snake2[0], self.direction2)
+        self.snake2.insert(0, new_head2)
+        if new_head2 in self.foods:
+            # Food eaten, don't remove tail (snake grows)
+            pass
+        else:
+            self.snake2.pop()

@@ -133,6 +133,10 @@ def train_maddpg(env, episodes=500):
     plt.grid(True)
     plt.show()
 
+
+
+
 if __name__ == "__main__":
     env = SnakeGameAI()
     train_maddpg(env)
+
